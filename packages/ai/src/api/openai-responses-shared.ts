@@ -363,13 +363,18 @@ export function convertResponsesTools(tools: readonly Tool[], options?: ConvertR
 		}
 
 		const constrainedStrict = resolveJsonSchemaStrictSampling(tool, supportsStrictMode);
+		let parameters = tool.parameters as Record<string, unknown>;
+		// Strict providers (Moonshot AI/Kimi-K3) reject function parameters that lack type: "object" at the root.
+		if (parameters && !parameters.type) {
+			parameters = { type: "object", properties: {}, ...parameters };
+		}
 		const functionTool: Omit<Extract<OpenAITool, { type: "function" }>, "strict"> & {
 			strict?: Extract<OpenAITool, { type: "function" }>["strict"];
 		} = {
 			type: "function",
 			name: tool.name,
 			description: tool.description,
-			parameters: tool.parameters as Record<string, unknown>, // TypeBox already generates JSON Schema
+			parameters,
 			...(options?.deferLoading ? { defer_loading: true } : {}),
 		};
 		if (supportsStrictMode) {
